@@ -114,7 +114,7 @@ def epilog(name):
     return textwrap.dedent('''\
         - file auth must be present and contain a dict with username and password e.g. {'username': 'test', 'password': 'pass'}
         - file cpcode must be present and contain a dict with cpode and human readable name for it e.g. {111: 'FOO', 222: 'BAR'}
-
+        - file email_settings must be present e.g. {'default_sender': 'foo@bar.com', 'default_recipient': 'foo@bar.com'}
         some examples
         --------------------------------
         %s --do_purge -data testdata.txt (for purging the content of file testdata.txt - since no object_type is given, the content is assumend URLs)
