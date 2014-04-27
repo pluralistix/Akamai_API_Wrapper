@@ -82,18 +82,16 @@ def do_request_and_handle_response(uri, method='GET', data=None, success=200):
                          data=data)
     msg = ''
     if r.status_code == success:
+        msg = 'REQUEST: \nURL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT:\n' + msg
+        for x, y in r.json().iteritems():
+            msg += str(x) + ': ' + str(y) + '\n'
         if method == 'POST':
             progressuri = r.json().get('progressUri')
             progressuri = purge_status_get_uri + progressuri.replace('/ccu/v2/purges/', '')
-            print type(progressuri)
-            print progressuri
-            msg += '\nYou may want to follow the progress on\n' + progressuri
-        for x, y in r.json().iteritems():
-            msg += str(x) + ': ' + str(y) + '\n'
-        msg = 'URL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT: \n' + msg
+            msg += '\nYou may want to follow the progress on\n' + progressuri + '\n'
         print msg
         if getattr(parsed_args, 'send_mail_on_success'):
-            send_email_notification(msg, 'Akamai - Successfully called Akamai-API')
+            send_email_notification(msg, 'Akamai - Successfully called API')
     else:
         print 'something went wrong. please check the message'
         try:
@@ -101,10 +99,10 @@ def do_request_and_handle_response(uri, method='GET', data=None, success=200):
                 msg += str(x) + ': ' + str(y) + '\n'
         except ValueError as e:
             msg = r.text
-        msg = 'URL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT: \n' + msg
+        msg = 'REQUEST: \nURL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT:\n' + msg
         print msg
         if getattr(parsed_args, 'send_mail_on_error'):
-            send_email_notification(msg, 'Akamai - Error while talking to Akamai-API')
+            send_email_notification(msg, 'Akamai - Error while talking to API')
         sys.exit(1)
 
 
