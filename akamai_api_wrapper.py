@@ -84,7 +84,9 @@ def do_request_and_handle_response(uri, method='GET', data=None, success=200):
     if r.status_code == success:
         if method == 'POST':
             progressuri = r.json().get('progressUri')
-            progressuri = purge_status_get_uri + progressuri
+            progressuri = purge_status_get_uri + progressuri.replace('/ccu/v2/purges/', '')
+            print type(progressuri)
+            print progressuri
             msg += '\nYou may want to follow the progress on\n' + progressuri
         for x, y in r.json().iteritems():
             msg += str(x) + ': ' + str(y) + '\n'
