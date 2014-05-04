@@ -7,10 +7,8 @@ import os
 import sys
 import argparse
 import textwrap
-import requests
-import smtplib
-from email.mime.text import MIMEText
-import getpass
+from AkamaiResponse import AkamaiResponse
+from Email import Email
 
 with open('auth', 'r') as f:
     auth = eval(f.read())
@@ -35,16 +33,8 @@ def send_email_notification(message, subject):
     if sender is not None:
         recipients = recipient if getattr(parsed_args, 'email_recipients') is None else getattr(parsed_args, 'email_recipients')
         if recipients is not None:
-            msg = MIMEText(message)
-            msg['Subject'] = subject
-            s = smtplib.SMTP('localhost')
-            msg['From'] = '%s <%s>' % (getpass.getuser(), sender)
-            msg['To'] = recipients
-            try:
-                s.sendmail('"%s <%s>"' % (getpass.getuser(), sender), recipients.replace(';',',').split(','), msg.as_string())
-            except Exception as e:
-                print e
-            s.quit()
+            email = Email(subject, message, sender, recipients)
+            email.build_and_send()
 
 
 def do_purge():
@@ -60,7 +50,7 @@ def do_purge():
     data = JsonObject(data2purge, getattr(parsed_args, 'object_type'), getattr(parsed_args, 'domain'),
                       getattr(parsed_args, 'akamai_action')).get_json()
 
-    do_request_and_handle_response(purge_request_post_uri, method='POST', data=data, success=201)
+    do_request_and_handle_response(purge_request_post_uri, method='POST', data=data, original_success=201)
 
 
 def do_check_status():
@@ -77,32 +67,31 @@ def do_check_queues():
     do_request_and_handle_response(purge_queues_get_uri)
 
 
-def do_request_and_handle_response(uri, method='GET', data=None, success=200):
-    r = requests.request(method, uri, auth=(username, password), headers={'content-type': 'application/json'},
-                         data=data)
-    msg = ''
-    if r.status_code == success:
-        msg = 'REQUEST: \nURL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT:\n' + msg
-        for x, y in r.json().iteritems():
-            msg += str(x) + ': ' + str(y) + '\n'
-        if method == 'POST':
-            progressuri = r.json().get('progressUri')
-            progressuri = purge_status_get_uri + progressuri.replace('/ccu/v2/purges/', '')
-            msg += '\nYou may want to follow the progress on\n' + progressuri + '\n'
-        print msg
+def do_request_and_handle_response(uri, method='GET', data=None, original_success=200):
+    success = original_success
+    ar = AkamaiResponse(username, password, uri, method=method, data=data, success=original_success)
+    subject = 'Your Akamai API-Request'
+    if method == 'POST':
+        subject, message, response = ar.get_response_but_wait_for_purge_completion()
+        success = 200
+    else:
+        message, response = ar.get_response()
+
+    if response.status_code == success:
+        print message
         if getattr(parsed_args, 'send_mail_on_success'):
-            send_email_notification(msg, 'Akamai - Successfully called API')
+            send_email_notification(message, subject)
     else:
         print 'something went wrong. please check the message'
         try:
-            for x, y in r.json().iteritems():
-                msg += str(x) + ': ' + str(y) + '\n'
+            for x, y in response.json().iteritems():
+                message += str(x) + ': ' + str(y) + '\n'
         except ValueError as e:
-            msg = r.text
-        msg = 'REQUEST: \nURL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT:\n' + msg
-        print msg
+            message = response.text
+        message = 'REQUEST: \nURL: ' + uri + '\nDATA: ' + (data if data is not None else 'None') + '\n\nRESULT:\n' + message
+        print message
         if getattr(parsed_args, 'send_mail_on_error'):
-            send_email_notification(msg, 'Akamai - Error while talking to API')
+            send_email_notification(message, 'Akamai - Error while talking to API')
         sys.exit(1)
 
 
