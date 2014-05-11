@@ -68,3 +68,11 @@ class JsonObject:
     @staticmethod
     def print_cpcode():
         return VALID_CPCODES
+
+    @staticmethod
+    def transform_cpcode(cpcode):
+        try:
+            cpcode = int(cpcode)
+            return VALID_CPCODES.get(cpcode)
+        except (ValueError, TypeError) as e:
+            return None

@@ -2,7 +2,7 @@ import requests
 import time
 import json
 from DateConverter import DateConverter
-
+from JsonObject import JsonObject
 
 class AkamaiResponse():
     def __init__(self, username, password, uri, method='GET', data=None, success=200):
@@ -48,6 +48,11 @@ class AkamaiResponse():
     def build_response_message(self, response, orig_data):
         subject = 'Your Akamai content removal request (%s)' % response.get('purgeId')
 
+        if orig_data.get('type').upper() == 'CPCODE':
+            objects = '\n'.join(x + ' (' + JsonObject.transform_cpcode(x) + ')' for x in orig_data.get('objects'))
+        else:
+            objects = '\n'.join(orig_data.get('objects'))
+
         msg = 'This message confirms that your Akamai content removal request has been processed by all active servers on our network. Here are the details.\n\n'
         msg += 'ID:                %s\n' % response.get('purgeId')
         msg += 'Domain:            %s\n' % orig_data.get('domain')
@@ -56,6 +61,6 @@ class AkamaiResponse():
         msg += 'Completion time:   %s\n' % DateConverter.convert_date(response.get('completionTime'))
         msg += '\n'
         msg += 'Content purged:\n\n'
-        msg += '%s %s(s)\n\n%s' % (orig_data.get('action'), orig_data.get('type'), '\n'.join(orig_data.get('objects')))
+        msg += '%s %s(s)\n\n%s' % (orig_data.get('action'), orig_data.get('type'), objects)
 
         return subject, msg
